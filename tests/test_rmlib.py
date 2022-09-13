@@ -3,6 +3,7 @@ import logging
 import os
 
 import pytest
+
 from myrm import rmlib
 
 
@@ -96,7 +97,7 @@ def test_mkdir_with_error(mocker):
     )
 
 
-def test_mkdir(caplog, mocker, fs):
+def test_mkdir(caplog, mocker):
     logger_mock = mocker.patch("myrm.rmlib.logger")
     path = "dir"
 
