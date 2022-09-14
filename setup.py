@@ -49,7 +49,7 @@ setup(
         "test": [
             "pyfakefs==4.6.3",
             "pytest-cov==3.0.0",
-            "pytest-mock==3.8.2",
+            "pytest-mock==3.6.0",
             "pytest==7.1.2",
             "tox==3.26.0",
         ],
