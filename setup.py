@@ -47,10 +47,10 @@ setup(
             "pylint==2.15.2",
         ],
         "test": [
-            "pyfakefs==4.6.3",
+            "pyfakefs==4.5.1",
             "pytest-cov==3.0.0",
             "pytest-mock==3.6.0",
-            "pytest==7.1.2",
+            "pytest==7.0.1",
             "tox==3.26.0",
         ],
     },
