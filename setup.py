@@ -22,7 +22,7 @@ setup(
         "Source code": "https://github.com/yakubovskyigor/rmlib",
     },
     python_requires=">=3.6",
-    setup_requires=["setuptools", "wheel"],
+    setup_requires=["setuptools==60.8.2", "wheel"],
     packages=find_packages(exclude=["tests"]),
     classifiers=[
         "Intended Audience :: Developers",
