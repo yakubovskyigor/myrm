@@ -97,7 +97,7 @@ def test_mkdir_with_error(mocker):
     )
 
 
-def test_mkdir(caplog, mocker, fs):  # pylint: disable=unused-argument
+def test_mkdir(caplog, mocker, fs):
     logger_mock = mocker.patch("myrm.rmlib.logger")
     path = "dir"
 
@@ -124,7 +124,7 @@ def test_mv_with_error(mocker):
 
 def test_mv(caplog, mocker, fs):
     logger_mock = mocker.patch("myrm.rmlib.logger")
-    src = "1.txt"
+    src = "11.txt"
     fs.create_file(src)
     dst = "2.txt"
 

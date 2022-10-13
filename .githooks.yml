@@ -27,6 +27,7 @@ repos:
     rev: v2.15.2
     hooks:
       - id: pylint
+        exclude: ^docs|tests
         language_version: python3
 
   # Use the static code checker to find and fix logical errors in python source code.
@@ -34,6 +35,7 @@ repos:
     rev: 5.0.4
     hooks:
       - id: flake8
+        exclude: ^docs|tests
         language_version: python3
 
   - repo: https://github.com/pycqa/isort
@@ -47,6 +49,7 @@ repos:
     rev: v0.971
     hooks:
       - id: mypy
+        additional_dependencies: ["types-tabulate"]
         exclude: ^docs|tests
         language_version: python3
 
