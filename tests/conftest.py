@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from myrm import bucket
+from myrm import bucket, settings
 
 
 @pytest.fixture()
@@ -46,3 +46,27 @@ def fake_entry():
 @pytest.fixture()
 def fake_bucket(fs):
     return bucket.Bucket(path="bucket", history_path="history.pkl")
+
+
+@pytest.fixture()
+def fake_positive_number_field():
+    class A:
+        test = settings.PositiveIntegerField()
+
+    return A()
+
+
+@pytest.fixture()
+def fake_path_field():
+    class A:
+        test = settings.PathField()
+
+    return A()
+
+
+@pytest.fixture()
+def fake_bool_field():
+    class A:
+        test = settings.BoolField()
+
+    return A()

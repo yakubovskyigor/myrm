@@ -13,18 +13,16 @@ from typing import Any, Hashable, List
 
 from tabulate import tabulate
 
-from . import rmlib
+from . import rmlib, settings
 
 # Create a new instance of the preferred reporting system for this program.
 logger = logging.getLogger("myrm")
 
-
-DEFAULT_HISTORY_PATH: str = r"C:\Users\igor.yakubovsky\projects\rmlib\history.pkl"
-SECONDS_IN_DAY: int = 24 * 60 * 60
-BYTES_IN_MEGABYTES: int = 1024 * 1024
-DEFAULT_BUCKET_SIZE: int = 100 * BYTES_IN_MEGABYTES
-DEFAULT_STORETIME: int = 20 * SECONDS_IN_DAY
-DEFAULT_TIME_FORMAT: str = "%Y/%m/%d %I:%M:%S %p"
+__all__ = (
+    "Status",
+    "BucketHistory",
+    "Bucket",
+)
 
 
 Entry = collections.namedtuple("Entry", ("status", "index", "name", "origin", "date"))
@@ -36,7 +34,9 @@ class Status(enum.Enum):
 
 
 class BucketHistory(collections.UserDict):
-    def __init__(self, *args: Any, path: str = DEFAULT_HISTORY_PATH, **kwargs: Any) -> None:
+    def __init__(
+        self, *args: Any, path: str = settings.DEFAULT_HISTORY_PATH, **kwargs: Any
+    ) -> None:
         super().__init__(*args, **kwargs)
 
         self.path = path
@@ -81,6 +81,11 @@ class BucketHistory(collections.UserDict):
 
     def show(self, count: int, page: int) -> str:
         values = list(self.values())
+        if not values:
+            logger.warning("History is empty.")
+            # Stop this program runtime and return the exit status code.
+            sys.exit(errno.EPERM)
+
         try:
             res = [values[index : index + count] for index in range(0, len(values), count)][  # noqa
                 page - 1
@@ -109,10 +114,10 @@ class BucketHistory(collections.UserDict):
 class Bucket:
     def __init__(
         self,
-        path: str,
-        history_path: str = DEFAULT_HISTORY_PATH,
-        maxsize: int = DEFAULT_BUCKET_SIZE,
-        storetime: int = DEFAULT_STORETIME,
+        path: str = settings.DEFAULT_BUCKET_PATH,
+        history_path: str = settings.DEFAULT_HISTORY_PATH,
+        maxsize: int = settings.DEFAULT_BUCKET_SIZE,
+        storetime: int = settings.DEFAULT_STORETIME,
     ) -> None:
         self.path = path
         self.maxsize = maxsize
@@ -122,8 +127,18 @@ class Bucket:
     def create(self) -> None:
         rmlib.mkdir(self.path)
 
-    def get_size(self) -> int:
+    def _get_size(self, path: str) -> int:
         size = 0
+
+        if os.path.isfile(path) or os.path.islink(path):
+            try:
+                return os.path.getsize(path)
+            except (OSError, IOError) as err:
+                logger.error("It's impossible to calculate size of the determined path.")
+                logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
+                # Stop this program runtime and return the exit status code.
+                sys.exit(getattr(err, "errno", errno.EIO))
+
         try:
             for top, _, nondirs in os.walk(self.path):
                 for name in nondirs:
@@ -140,6 +155,9 @@ class Bucket:
         rmlib.rmdir(self.path)
         rmlib.mkdir(self.path)
         self.history.cleanup()
+
+    def get_size(self) -> int:
+        return self._get_size(self.path)
 
     def _rm(self, path: str) -> None:
         if os.path.isfile(path):
@@ -161,11 +179,11 @@ class Bucket:
             index=self.history.get_next_index(),
             name=os.path.basename(path),
             origin=path,
-            date=datetime.datetime.now().strftime(DEFAULT_TIME_FORMAT),
+            date=datetime.datetime.now().strftime(settings.DEFAULT_TIME_FORMAT),
         )
 
     def rm(self, path: str, force: bool = False) -> None:
-        if os.path.getsize(path) + self.get_size() >= self.maxsize * BYTES_IN_MEGABYTES:
+        if self._get_size(path) + self.get_size() >= self.maxsize * settings.BYTES_IN_MEGABYTES:
             logger.error("It's impossible to move item to bucket because the bucket is full.")
             # Stop this program runtime and return the exit status code.
             sys.exit(errno.EPERM)
@@ -184,7 +202,7 @@ class Bucket:
             # Stop this program runtime and return the exit status code.
             sys.exit(getattr(err, "errno", errno.EPERM))
 
-        items = [name for name in content if name not in self.history.keys()]
+        items = (name for name in content if name not in self.history.keys())
         # Step - 1.
         for name in items:
             self.history[name] = Entry(
@@ -192,7 +210,7 @@ class Bucket:
                 index=self.history.get_next_index(),
                 name=os.path.basename(name),
                 origin=Status.UNKNOWN.value,
-                date=datetime.datetime.now().strftime(DEFAULT_TIME_FORMAT),
+                date=datetime.datetime.now().strftime(settings.DEFAULT_TIME_FORMAT),
             )
 
         # Step - 2.
@@ -221,7 +239,7 @@ class Bucket:
                 # Stop this program runtime and return the exit status code.
                 sys.exit(getattr(err, "errno", errno.EPERM))
 
-            if removed_time > current_time - self.storetime * SECONDS_IN_DAY:
+            if removed_time > current_time - self.storetime * settings.SECONDS_IN_DAY:
                 self._rm(abspath)
 
     def restore(self, index: int) -> None:

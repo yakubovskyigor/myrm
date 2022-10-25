@@ -100,6 +100,16 @@ def test_bucket_history_show_with_error(mocker, fake_bucket_history, fake_entry)
     logger_mock.error.assert_called_with("It's impossible to show the provided page number.")
 
 
+def test_bucket_history_show_with_inner_error(mocker, fake_bucket_history):
+    logger_mock = mocker.patch("myrm.bucket.logger")
+
+    with pytest.raises(SystemExit) as exit_info:
+        fake_bucket_history.show(1, 1)
+
+    assert exit_info.value.code == errno.EPERM
+    logger_mock.warning.assert_called_with("History is empty.")
+
+
 def test_bucket_create(fake_bucket):
     fake_bucket.create()
     assert os.path.isdir(fake_bucket.path)
@@ -111,15 +121,37 @@ def test_bucket_get_size_with_error(mocker, fake_bucket):
     logger_mock = mocker.patch("myrm.bucket.logger")
 
     with pytest.raises(SystemExit) as exit_info:
-        fake_bucket.get_size()
+        fake_bucket._get_size("")
 
     assert exit_info.value.code == errno.EPERM
     logger_mock.error.assert_called_with("The determined path don't exist on the current machine.")
 
 
+def test_bucket_get_size_with_inner_error(mocker, fake_bucket, fs):
+    path = "test.txt"
+    fs.create_file(path)
+
+    get_mock = mocker.patch("myrm.bucket.os.path.getsize")
+    get_mock.side_effect = IOError(errno.EIO, "")
+    logger_mock = mocker.patch("myrm.bucket.logger")
+
+    with pytest.raises(SystemExit) as exit_info:
+        fake_bucket._get_size(path)
+
+    assert exit_info.value.code == errno.EIO
+    logger_mock.error.assert_called_with(
+        "It's impossible to calculate size of the determined path."
+    )
+
+
 def test_bucket_get_size(fake_bucket, fs):
+    fs.create_file(os.path.join(fake_bucket.path, "test.txt"), contents="test")
+    assert fake_bucket._get_size(fake_bucket.path) > 0
+
+
+def test_bucket_get_size_dir(fake_bucket, fs):
     fs.create_file(os.path.join(fake_bucket.path, "test"), contents="test")
-    assert fake_bucket.get_size() > 0
+    assert fake_bucket._get_size(fake_bucket.path) > 0
 
 
 def test_bucket_cleanup(fake_bucket, fs):
