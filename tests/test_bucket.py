@@ -298,8 +298,8 @@ def test_bucket_timeout_cleanup_with_inner_error(fake_bucket, mocker, fs):
 def test_bucket_timeout_cleanup(fake_bucket, mocker, fs):
     path = os.path.join(fake_bucket.path, "test")
     fs.create_file(path)
-    fake_bucket.storetime = 10
-    mocker.patch("myrm.bucket.time.time").return_value = 1
+    fake_bucket.storetime = 1
+    mocker.patch("myrm.bucket.time.time").return_value = 10000000000
 
     fake_bucket.timeout_cleanup()
 
