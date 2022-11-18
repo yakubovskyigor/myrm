@@ -183,7 +183,7 @@ class Bucket:
         )
 
     def rm(self, path: str, force: bool = False) -> None:
-        if self._get_size(path) + self.get_size() >= self.maxsize * settings.BYTES_IN_MEGABYTES:
+        if self._get_size(path) + self.get_size() >= self.maxsize:
             logger.error("It's impossible to move item to bucket because the bucket is full.")
             # Stop this program runtime and return the exit status code.
             sys.exit(errno.EPERM)
@@ -239,7 +239,7 @@ class Bucket:
                 # Stop this program runtime and return the exit status code.
                 sys.exit(getattr(err, "errno", errno.EPERM))
 
-            if removed_time > current_time - self.storetime * settings.SECONDS_IN_DAY:
+            if removed_time <= current_time - self.storetime:
                 self._rm(abspath)
 
     def restore(self, index: int) -> None:
@@ -263,4 +263,9 @@ class Bucket:
                 else:
                     rmlib.mvdir(abspath, entry.origin)
 
+        self.check()
+
+    def startup(self) -> None:
+        self.create()
+        self.timeout_cleanup()
         self.check()

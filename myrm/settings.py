@@ -4,9 +4,9 @@ import json
 import logging
 import os
 import sys
-from typing import Dict, Union, Any
+from typing import Any, Dict, Union
 
-from myrm import rmlib
+from . import rmlib
 
 # Create a new instance of the preferred reporting system for this program.
 logger = logging.getLogger("myrm")
@@ -137,7 +137,7 @@ class AppSettings:
         }
 
 
-def generate(path: str) -> None:
+def generate(path: str = DEFAULT_SETTINGS_PATH) -> None:
     dirname = os.path.dirname(path)
     if dirname:
         rmlib.mkdir(dirname)
@@ -152,7 +152,7 @@ def generate(path: str) -> None:
         sys.exit(getattr(err, "errno", errno.EIO))
 
 
-def load(path: str) -> AppSettings:
+def load(path: str = DEFAULT_SETTINGS_PATH) -> AppSettings:
     try:
         with io.open(path, mode="rt", encoding="utf-8") as stream_in:
             return AppSettings(**json.load(stream_in))
