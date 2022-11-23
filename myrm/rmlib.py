@@ -15,9 +15,10 @@ __all__ = (
 )
 
 
-def rm(path: str) -> None:
+def rm(path: str, dry_run: bool = False) -> None:
     try:
-        os.remove(path)
+        if not dry_run or not os.path.exists(path):
+            os.remove(path)
     except OSError as err:
         logger.error("The determined path can't be removed from the current machine.")
         logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
@@ -27,7 +28,7 @@ def rm(path: str) -> None:
         logger.info("Item '%s' was removed without errors.", path)
 
 
-def rmdir(path: str) -> None:
+def rmdir(path: str, dry_run: bool = False) -> None:
     try:
         content = os.walk(path, topdown=False)
     except OSError as err:
@@ -39,13 +40,14 @@ def rmdir(path: str) -> None:
     for top, dirs, nondirs in content:
         # Step — 1.
         for name in nondirs:
-            rm(os.path.join(top, name))
+            rm(os.path.join(top, name), dry_run)
 
         try:
             # Step — 2.
             for name in dirs:
                 abspath = os.path.join(top, name)
-                os.rmdir(abspath)
+                if not dry_run:
+                    os.rmdir(abspath)
                 logger.info("Directory '%s' was removed from the current machine.", abspath)
         except OSError as err:
             logger.error("The determined path can't be removed from the current machine.")
@@ -54,7 +56,8 @@ def rmdir(path: str) -> None:
             sys.exit(getattr(err, "errno", errno.EPERM))
 
     try:
-        os.rmdir(path)
+        if not dry_run or not os.path.exists(path):
+            os.rmdir(path)
     except OSError as err:
         logger.error("The determined path can't be removed from the current machine.")
         logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
@@ -64,10 +67,11 @@ def rmdir(path: str) -> None:
         logger.info("Directory '%s' was removed without errors.", path)
 
 
-def mkdir(path: str) -> None:
+def mkdir(path: str, dry_run: bool = False) -> None:
     try:
-        # Create a new directory on the current machine.
-        os.makedirs(path)
+        if not dry_run:
+            # Create a new directory on the current machine.
+            os.makedirs(path)
         logger.info("The required directory '%s' was created on the current machine.", path)
     except OSError as err:
         if not (err.errno == errno.EEXIST and os.path.isdir(path)):
@@ -77,9 +81,10 @@ def mkdir(path: str) -> None:
             sys.exit(getattr(err, "errno", errno.EPERM))
 
 
-def mv(src: str, dst: str) -> None:
+def mv(src: str, dst: str, dry_run: bool = False) -> None:
     try:
-        os.rename(src, dst)
+        if not dry_run or not os.path.exists(src):
+            os.rename(src, dst)
     except OSError as err:
         logger.error("Can't move the determined item to the destination path.")
         logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
@@ -89,7 +94,7 @@ def mv(src: str, dst: str) -> None:
         logger.info("Item '%s' was moved to '%s' as the destination path.", src, dst)
 
 
-def mvdir(src: str, dst: str) -> None:
+def mvdir(src: str, dst: str, dry_run: bool = False) -> None:
     try:
         content = os.walk(src, topdown=False)
     except OSError as err:
@@ -98,19 +103,19 @@ def mvdir(src: str, dst: str) -> None:
         # Stop this program runtime and return the exit status code.
         sys.exit(getattr(err, "errno", errno.EPERM))
 
-    # Create a destination directory on the current machine.
-    mkdir(dst)
-    logger.info("The required directory '%s' was created on the current machine.", dst)
+    if not dry_run:
+        for top, dirs, nondirs in content:
+            # Create a destination directory on the current machine.
+            mkdir(dst)
 
-    for top, dirs, nondirs in content:
-        # Step — 1.
-        for name in dirs:
-            mkdir(os.path.join(dst, name))
+            # Step — 1.
+            for name in dirs:
+                mkdir(os.path.join(dst, name), dry_run)
 
-        # Step — 2.
-        for name in nondirs:
-            mv(os.path.join(top, name), os.path.join(dst, name))
+            # Step — 2.
+            for name in nondirs:
+                mv(os.path.join(top, name), os.path.join(dst, name), dry_run)
 
-    # Remove determined directory from the current machine.
-    rmdir(src)
+        # Remove determined directory from the current machine.
+        rmdir(src, dry_run)
     logger.info("Directory '%s' was moved to '%s' as a destination path.", src, dst)

@@ -105,10 +105,11 @@ class BucketHistory(collections.UserDict):
     def get_next_index(self) -> int:
         return max(self.get_indexes(), default=0) + 1
 
-    def cleanup(self) -> None:
-        self.data = {}
-        # Save the required data on the current machine.
-        self._write()
+    def cleanup(self, dry_run: bool = False) -> None:
+        if not dry_run:
+            self.data = {}
+            # Save the required data on the current machine.
+            self._write()
 
 
 class Bucket:
@@ -124,8 +125,8 @@ class Bucket:
         self.storetime = storetime
         self.history = BucketHistory(path=history_path)
 
-    def create(self) -> None:
-        rmlib.mkdir(self.path)
+    def create(self, dry_run: bool = False) -> None:
+        rmlib.mkdir(self.path, dry_run)
 
     def _get_size(self, path: str) -> int:
         size = 0
@@ -140,7 +141,7 @@ class Bucket:
                 sys.exit(getattr(err, "errno", errno.EIO))
 
         try:
-            for top, _, nondirs in os.walk(self.path):
+            for top, _, nondirs in os.walk(path):
                 for name in nondirs:
                     size += os.path.getsize(os.path.join(top, name))
         except OSError as err:
@@ -151,28 +152,28 @@ class Bucket:
 
         return size
 
-    def cleanup(self) -> None:
-        rmlib.rmdir(self.path)
-        rmlib.mkdir(self.path)
-        self.history.cleanup()
+    def cleanup(self, dry_run: bool = False) -> None:
+        rmlib.rmdir(self.path, dry_run)
+        rmlib.mkdir(self.path, dry_run)
+        self.history.cleanup(dry_run)
 
     def get_size(self) -> int:
         return self._get_size(self.path)
 
-    def _rm(self, path: str) -> None:
+    def _rm(self, path: str, dry_run: bool = False) -> None:
         if os.path.isfile(path):
-            rmlib.rm(path)
+            rmlib.rm(path, dry_run)
         else:
-            rmlib.rmdir(path)
+            rmlib.rmdir(path, dry_run)
 
-    def _mv(self, path: str) -> None:
+    def _mv(self, path: str, dry_run: bool = False) -> None:
         name = str(uuid.uuid4())
 
         abspath = os.path.join(self.path, name)
         if os.path.isfile(path):
-            rmlib.mv(path, abspath)
+            rmlib.mv(path, abspath, dry_run)
         else:
-            rmlib.mvdir(path, abspath)
+            rmlib.mvdir(path, abspath, dry_run)
 
         self.history[name] = Entry(
             status=Status.CORRECT.value,
@@ -182,16 +183,16 @@ class Bucket:
             date=datetime.datetime.now().strftime(settings.DEFAULT_TIME_FORMAT),
         )
 
-    def rm(self, path: str, force: bool = False) -> None:
+    def rm(self, path: str, force: bool = False, dry_run: bool = False) -> None:
         if self._get_size(path) + self.get_size() >= self.maxsize:
             logger.error("It's impossible to move item to bucket because the bucket is full.")
             # Stop this program runtime and return the exit status code.
             sys.exit(errno.EPERM)
 
         if force:
-            self._rm(path)
+            self._rm(path, dry_run)
         else:
-            self._mv(path)
+            self._mv(path, dry_run)
 
     def check(self) -> None:
         try:
@@ -232,7 +233,7 @@ class Bucket:
             abspath = os.path.join(self.path, name)
 
             try:
-                removed_time = os.stat(abspath).st_mtime
+                removed_time = os.stat(abspath).st_ctime
             except OSError as err:
                 logger.error("It's impossible to get removed time for the determined path.")
                 logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
@@ -242,7 +243,7 @@ class Bucket:
             if removed_time <= current_time - self.storetime:
                 self._rm(abspath)
 
-    def restore(self, index: int) -> None:
+    def restore(self, index: int, dry_run: bool = False) -> None:
         if index not in self.history.get_indexes():
             logger.error("The determined index don't exist in history.")
             # Stop this program runtime and return the exit status code.
@@ -259,9 +260,9 @@ class Bucket:
                 # Step - 2.
                 abspath = os.path.join(self.path, name)
                 if os.path.isfile(abspath):
-                    rmlib.mv(abspath, entry.origin)
+                    rmlib.mv(abspath, entry.origin, dry_run)
                 else:
-                    rmlib.mvdir(abspath, entry.origin)
+                    rmlib.mvdir(abspath, entry.origin, dry_run)
 
         self.check()
 
