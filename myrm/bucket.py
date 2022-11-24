@@ -131,7 +131,7 @@ class Bucket:
     def _get_size(self, path: str) -> int:
         size = 0
 
-        if os.path.isfile(path) or os.path.islink(path):
+        if os.path.isfile(path) and not os.path.islink(path):
             try:
                 return os.path.getsize(path)
             except (OSError, IOError) as err:
@@ -143,7 +143,9 @@ class Bucket:
         try:
             for top, _, nondirs in os.walk(path):
                 for name in nondirs:
-                    size += os.path.getsize(os.path.join(top, name))
+                    abspath = os.path.join(top, name)
+                    if not os.path.islink(abspath):
+                        size += os.path.getsize(abspath)
         except OSError as err:
             logger.error("The determined path don't exist on the current machine.")
             logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
@@ -161,7 +163,7 @@ class Bucket:
         return self._get_size(self.path)
 
     def _rm(self, path: str, dry_run: bool = False) -> None:
-        if os.path.isfile(path):
+        if os.path.isfile(path) or os.path.islink(path):
             rmlib.rm(path, dry_run)
         else:
             rmlib.rmdir(path, dry_run)
@@ -170,7 +172,7 @@ class Bucket:
         name = str(uuid.uuid4())
 
         abspath = os.path.join(self.path, name)
-        if os.path.isfile(path):
+        if os.path.isfile(path) or os.path.islink(path):
             rmlib.mv(path, abspath, dry_run)
         else:
             rmlib.mvdir(path, abspath, dry_run)
@@ -233,7 +235,9 @@ class Bucket:
             abspath = os.path.join(self.path, name)
 
             try:
-                removed_time = os.stat(abspath).st_ctime
+                removed_time = time.mktime(
+                    time.strptime(self.history[name].date, settings.DEFAULT_TIME_FORMAT)
+                )
             except OSError as err:
                 logger.error("It's impossible to get removed time for the determined path.")
                 logger.debug("An unexpected error occurred at this program runtime:", exc_info=True)
@@ -259,7 +263,7 @@ class Bucket:
 
                 # Step - 2.
                 abspath = os.path.join(self.path, name)
-                if os.path.isfile(abspath):
+                if os.path.isfile(abspath) or os.path.islink(abspath):
                     rmlib.mv(abspath, entry.origin, dry_run)
                 else:
                     rmlib.mvdir(abspath, entry.origin, dry_run)
@@ -268,5 +272,6 @@ class Bucket:
 
     def startup(self) -> None:
         self.create()
+        self.check()
         self.timeout_cleanup()
         self.check()

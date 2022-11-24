@@ -282,9 +282,10 @@ def test_bucket_timeout_cleanup_with_error(fake_bucket, mocker):
 def test_bucket_timeout_cleanup_with_inner_error(fake_bucket, mocker, fs):
     fs.create_file(os.path.join(fake_bucket.path, "test"))
 
-    stat_mock = mocker.patch("myrm.bucket.os.stat")
+    stat_mock = mocker.patch("myrm.bucket.time.mktime")
     stat_mock.side_effect = OSError(errno.EPERM, "")
     logger_mock = mocker.patch("myrm.bucket.logger")
+    fake_bucket.check()
 
     with pytest.raises(SystemExit) as exit_info:
         fake_bucket.timeout_cleanup()
@@ -299,8 +300,10 @@ def test_bucket_timeout_cleanup(fake_bucket, mocker, fs):
     path = os.path.join(fake_bucket.path, "test")
     fs.create_file(path)
     fake_bucket.storetime = 1
-    mocker.patch("myrm.bucket.time.time").return_value = 10000000000
+    mocker.patch("myrm.bucket.time.time").return_value = 100
+    mocker.patch("myrm.bucket.time.mktime").return_value = 10
 
+    fake_bucket.check()
     fake_bucket.timeout_cleanup()
 
     assert not os.path.exists(path)
