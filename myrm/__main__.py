@@ -83,7 +83,7 @@ def confirmation(question: str) -> bool:
     return False
 
 
-def main() -> None:
+def main() -> None:  # pylint: disable=R0915
     setting_parser = argparse.ArgumentParser(add_help=False)
     setting_parser.add_argument(
         "--settings",
