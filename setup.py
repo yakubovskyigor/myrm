@@ -2,6 +2,8 @@ import io
 
 from setuptools import find_packages, setup
 
+from myrm import __version__
+
 with io.open("README.md", mode="rt", encoding="utf-8") as stream_in:
     # Load the readme file and use it as the long description for this python package.
     long_description = stream_in.read()
@@ -9,7 +11,7 @@ with io.open("README.md", mode="rt", encoding="utf-8") as stream_in:
 
 setup(
     name="myrm",
-    version="0.0.0",
+    version=__version__,
     description="Simple utility to remove files and directories",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -21,6 +23,7 @@ setup(
         "Issue tracker": "https://github.com/yakubovskyigor/rmlib/issues",
         "Source code": "https://github.com/yakubovskyigor/rmlib",
     },
+    install_requires=["tabulate>=0.8.1,<1.0.0"],
     python_requires=">=3.6",
     setup_requires=["setuptools", "wheel"],
     packages=find_packages(exclude=["tests"]),
@@ -52,6 +55,11 @@ setup(
             "pytest-mock>=3.6.0,<3.7.0",
             "pytest>=7.0.0,<8.0.0",
             "tox>=3.26.0,<3.27.0",
+        ],
+    },
+    entry_points={
+        "console_scripts": [
+            "myrm = myrm.__main__:main",
         ],
     },
 )
