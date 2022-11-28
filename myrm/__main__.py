@@ -44,7 +44,7 @@ def abspath(path: str) -> str:
 
 
 def remove(arguments: argparse.Namespace, bucket_instance: bucket.Bucket) -> None:
-    if arguments.force and not (arguments.confirm or confirmation("delete items")):
+    if arguments.force and not (arguments.confirm or confirmation("delete item(s)")):
         return None
 
     for file in arguments.FILES:
@@ -75,7 +75,7 @@ def maintain_bucket(arguments: argparse.Namespace, bucket_instance: bucket.Bucke
 
 
 def confirmation(question: str) -> bool:
-    answer = input(f"{question} (yes/no): ").lower()
+    answer = input(f"Do you want to {question}? (yes/no): ").lower()
 
     if answer in ("yes", "y"):
         return True
